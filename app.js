@@ -13,6 +13,8 @@ app.set('view options', {
     layout: false
 });
 
+app.use('/styles/', express.static(__dirname + '/styles'));
+
 app.get('/', function(req, res) {
     res.render('index');
 });
