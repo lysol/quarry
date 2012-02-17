@@ -5,6 +5,7 @@ express = require 'express'
 data = require './data'
 app = express.createServer()
 io = require('socket.io').listen app
+forms = require './forms'
 
 app.configure () ->
     app.set 'view engine', 'html'
@@ -21,6 +22,14 @@ app.use '/asset_images/', express.static __dirname + '/asset_images'
 
 app.use express.cookieParser()
 app.use express.session secret: '19j0ddjijs9jsoiejr'
+
+app.get '/register', (req, res) ->
+    res.render 'register'
+
+app.get '/login', (req, res) ->
+    lform = new forms.LoginForm 'login-form'
+    res.render 'login',
+        login_form: lform
 
 app.get '/', (req, res) ->
     res.render 'index'
