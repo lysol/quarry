@@ -4,10 +4,45 @@
         <meta charset="utf-8" />
         <title>{% block title %}test{% endblock %}</title>
         <link rel="stylesheet" href="/styles/bootstrap.css"></link>
+        <link rel="stylesheet" href="/styles/main.css"></link>
+        <script type="text/javascript" src="/js/jquery-1.7.1.min.js"></script>
+        <script type="text/javascript" src="/js/bootstrap.js"></script>
+        <script type="text/javascript" src="/socket.io/socket.io.js"></script>
+        <script type="text/javascript" src="/js/quarry.js"></script>
     </head>
     <body>
-        {% block content %}
-        content
-        {% endblock %}
+        <div class="navbar navbar-fixed-top">
+            <div class="navbar-inner">
+                <div class="container">
+                    <a class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </a>
+                    <a class="brand" href="/">Quarry</a>
+                    <div class="nav-collapse">
+                        <ul class="nav">
+                            <li>
+                                <a href="/register">Register</a>
+                            </li>
+
+                            <li>
+                                <a href="/login">Login</a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="container">
+            <header id="main">
+                <h1>Quarry</h1>
+            </header>
+            <section id="content">
+            {% block content %}
+            content
+            {% endblock %}
+            </section>
+        </div>
     </body>
 </html>
