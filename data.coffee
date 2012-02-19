@@ -13,28 +13,31 @@ client = new pg.Client connString
 client.connect()
 
 exports.createUser = (username, password, email, callback) ->
-    query = client.query "SELECT * FROM users WHERE username = $1", [username]
-    query.on 'row', (row) ->
-        throw new Error 'Username already exists.'
-    query = client.query "SELECT * FROM users WHERE email = $1", [email]
-    query.on 'row', (row) ->
-        throw new Error 'Email address already exists.'
-    client.query """
-        INSERT INTO users (
-            username,
-            password,
-            email
-        ) VALUES (
-            $1,
-            $2,
-            $3
-        );""", [username, hash.sha256(password), email]
-    client.query """
-        SELECT * FROM users
-        WHERE username = $1
-        """, [username]
-            .on 'row', callback
+    query = client.query "SELECT * FROM users WHERE username = $1", [username], (error, result) ->
+        if result.rows[0]
+            callback false, "This username already exists."
+        else
+            query = client.query "SELECT * FROM users WHERE email = $1", [email], (error, result) ->
+                if result.rows[0]
+                    callback false, 'Email address already exists.'
+                else
+
+                    client.query """
+                        INSERT INTO users (
+                            username,
+                            password,
+                            email
+                        ) VALUES (
+                            $1,
+                            $2,
+                            $3
+                        );""", [username, hash.sha256(password), email]
+                    query = client.query """
+                        SELECT * FROM users
+                        WHERE username = $1
+                        """, [username], (error, result) ->
+                            callback result.rows[0]
 
 exports.getUser = (username, callback) ->
-    client.query "SELECT * FROM users WHERE username = $1", [username]
-        .on 'row', callback
+    query = client.query "SELECT * FROM users WHERE username = $1 OR email = $1", [username], (err, result) ->
+        callback result.rows[0]

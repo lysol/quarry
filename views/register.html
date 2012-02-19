@@ -3,4 +3,13 @@
 {% block title %}Register{% endblock %}
 
 {% block content %}
+<div class="span6">
+    <h2>Register</h2>
+    {% if error %}
+        <div class="error">
+            {{ error }}
+        </div>
+    {% endif %}
+    {{ register_form }}
+</div>
 {% endblock %}

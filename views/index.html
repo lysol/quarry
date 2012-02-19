@@ -3,5 +3,11 @@
 {% block title %}index{% endblock %}
 
 {% block content %}
-test!
+
+{% if session.user %}
+
+{% else %}
+Welcome
+{% endif %}
+
 {% endblock %}
