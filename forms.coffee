@@ -11,8 +11,8 @@ class Input
         if !value
             value = ''
         """
-        <label for="#{@name}">#{@longname}</label>
-        <input #{@class}id="#{@id}" type="text" name="#{@name}" value="#{value}" />
+        <label for="quarryForm[#{@name}]">#{@longname}</label>
+        <input #{@class}id="#{@id}" type="text" name="quarryForm[#{@name}]" value="#{value}" />
         """
 
 class PasswordInput extends Input
@@ -20,8 +20,8 @@ class PasswordInput extends Input
         if !value
             value = ''
         """
-        <label for="#{@name}">#{@longname}</label>
-        <input #{@class}type="password" id="#{@id}" type="text" name="#{@name}" value="#{value}" />
+        <label for="quarryForm[#{@name}]">#{@longname}</label>
+        <input #{@class}type="password" id="#{@id}" type="text" name="quarryForm[#{@name}]" value="#{value}" />
         """
 
 class Select
@@ -35,8 +35,8 @@ class Select
 
     render: (value) ->
         payload = ""
-        payload += "<label for=\"#{@name}\">#{@longname}</label>"
-        payload += """<select id="#{@id}" #{@class}name="#{@name}">"""
+        payload += "<label for=\"quarryForm[#{@name}]\">#{@longname}</label>"
+        payload += """<select id="#{@id}" #{@class}name="quarryForm[#{@name}]">"""
         for option in @options
             if option.value == value
                 c = 'selected'
@@ -66,8 +66,8 @@ class Checkbox
         else
             c = ''
         return """
-            <label for="#{@name}">#{@longname}</label>
-            <input type="checkbox" name="#{@name}" value="#{value}" #{c} />
+            <label for="quarryForm[#{@name}]">#{@longname}</label>
+            <input type="checkbox" name="quarryForm[#{@name}]" value="#{value}" #{c} />
             """
 
 class Button
@@ -96,6 +96,8 @@ class Form
             @class = ''
 
     render: (values={}, action='', method="POST") ->
+        if values.length == 0
+            values = req.body.quarryForm
         payload = """<form#{@id}#{@class} method="#{method}" action="#{action}">"""
         for element in @elements
             if element.name in values and values[element.name] != undefined
