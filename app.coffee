@@ -33,14 +33,11 @@ app.post '/register', (req, res) ->
     registerForm = new forms.RegisterForm 'register-form', 'well'
     registerForm = registerForm.render()
     _render = (error) ->
-        console.log "Error encountered #{error}"
         res.render 'register',
             error: error
             register_form: registerForm
     form = req.body.quarryForm
-    console.log "Username: #{form.username}"
     data.getUser form.username, (user) ->
-        console.log 'got here'
         if user
             _render 'This username already exists.'
         else
@@ -54,7 +51,6 @@ app.post '/register', (req, res) ->
                         _render 'Invalid email address.'
                     else
                         data.createUser form.username, form.password, form.email, (user) ->
-                            console.log 'got here'
                             req.session.user = user
                             res.redirect '/registerSuccess'
 
@@ -72,9 +68,7 @@ app.post '/login', (req, res) ->
     loginForm = new forms.LoginForm 'login-form', 'well'
     loginForm = loginForm.render()
     form = req.body.quarryForm
-    console.log form
     if not form.login or not form.password
-        console.log 'incomplete form'
         res.render 'login',
             error: 'Please fill out the entire form.'
             login_form: loginForm
@@ -84,7 +78,6 @@ app.post '/login', (req, res) ->
                 req.session.user = user
                 res.redirect '/'
             else
-                console.log 'Bad login'
                 res.render 'login',
                     error: 'Could not log you in.'
                     login_form: loginForm
@@ -96,8 +89,20 @@ app.get '/login', (req, res) ->
         login_form: lform.render()
 
 app.get '/', (req, res) ->
-    console.log req.session.user
     res.render 'index'
+
+
+####### GAME
+
+
+app.get '/game', (req, res) ->
+    if not req.session.user
+        res.redirect '/login'
+    res.render 'game'
+
+
+
+#######
 
 io.sockets.on 'connection', (socket) ->
     #socket.emit 'game_message', 'This is a test.'

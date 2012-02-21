@@ -55,7 +55,6 @@ exports.getUser = (username, callback) ->
 exports.tryLogin = (username, password, callback) ->
     password = hash password
     query = client.query "SELECT * FROM users WHERE (username = $1 OR email = $1) AND password = $2", [username, password], (err, result) ->
-        console.log result
         if result.rowCount == 1
             callback result.rows[0]
         else
