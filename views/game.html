@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block title %}Play Quarry{% endblock %}
+{% block coffeescript %}
+<script type="text/javascript" src="js/coffee-script.js"></script>
+<script type="text/coffeescript">
+
+($ 'document').ready () ->
+    canvas = document.getElementById 'quarry'
+    if canvas.getContext
+        ctx = canvas.getContext '2d'
+    else
+        alert 'This game requires an HTML5-capable browser supporting the Canvas element.'
+    return if !ctx
+
+    ctx.fillStyle = 'rgb(0,0,0)'
+    ctx.fillRect 0,0,800,500
+
+    draw()
+
+</script>
+
+{% endblock %}
+
+{% block content %}
+    <canvas id="quarry" width="800" height="500"></canvas>
+{% endblock %}
