@@ -4,8 +4,10 @@ twigjs = require 'twig'
 express = require 'express'
 data = require './data'
 app = express.createServer()
-io = require('socket.io').listen app
+io = require 'socket.io'
+sio = require 'socket.io-sessions'
 forms = require './forms'
+redisStore = (require 'connect-redis')(express)
 
 app.configure () ->
     app.set 'view engine', 'html'
@@ -22,7 +24,11 @@ app.use '/asset_images/', express.static __dirname + '/asset_images'
 
 app.use express.bodyParser()
 app.use express.cookieParser()
-app.use express.session secret: '19j0ddjijs9jsoiejr'
+
+sessionStorage = new redisStore
+app.use express.session
+    secret: '19j0ddjijs9jsoiejr'
+    store: sessionStorage
 
 app.dynamicHelpers session: (req, res) -> req.session
 
@@ -103,8 +109,30 @@ app.get '/game', (req, res) ->
 
 
 #######
+#
 
-io.sockets.on 'connection', (socket) ->
-    #socket.emit 'game_message', 'This is a test.'
+io = io.listen app
+
+socket = sio.enable
+    socket: io
+    store: sessionStorage
+    parser: express.cookieParser()
+
+console.log socket
+
+socket.on 'sinvalid', (client, session) -> client.emit 'refresh'
+
+socket.on 'sconnection', (client, session) ->
+    client.on 'move', (data) ->
+        session.user.move data.xd data.yd
+        data.sendAllBlocks session.user, (blocks) ->
+            client.emit 'blockUpdate', blocks: blocks
+
+    data.sendAllBlocks session.user, (blocks) ->
+        client.emit 'blockUpdate', blocks: blocks
+    console.log 'butts'
+
+socket.on 'connection', (client) ->
+    console.log 'farts'
 
 app.listen port
