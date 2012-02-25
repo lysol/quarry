@@ -11,8 +11,12 @@ class Input
         if !value
             value = ''
         """
-        <label for="quarryForm[#{@name}]">#{@longname}</label>
-        <input #{@class}id="#{@id}" type="text" name="quarryForm[#{@name}]" value="#{value}" />
+        <div class="control-group">
+            <label class="control-label" for="quarryForm[#{@name}]">#{@longname}</label>
+            <div class="controls">
+                <input #{@class}id="#{@id}" type="text" name="quarryForm[#{@name}]" value="#{value}" />
+            </div>
+        </div>
         """
 
 class PasswordInput extends Input
@@ -20,8 +24,12 @@ class PasswordInput extends Input
         if !value
             value = ''
         """
-        <label for="quarryForm[#{@name}]">#{@longname}</label>
-        <input #{@class}type="password" id="#{@id}" type="text" name="quarryForm[#{@name}]" value="#{value}" />
+        <div class="control-group">
+            <label class="control-label" for="quarryForm[#{@name}]">#{@longname}</label>
+            <div class="controls">
+                <input #{@class}type="password" id="#{@id}" type="text" name="quarryForm[#{@name}]" value="#{value}" />
+            </div>
+        </div>
         """
 
 class Select
@@ -34,9 +42,9 @@ class Select
             @class = ''
 
     render: (value) ->
-        payload = ""
-        payload += "<label for=\"quarryForm[#{@name}]\">#{@longname}</label>"
-        payload += """<select id="#{@id}" #{@class}name="quarryForm[#{@name}]">"""
+        payload = """<div class="control-group">"""
+        payload += "<label class=\"control-label\" for=\"quarryForm[#{@name}]\">#{@longname}</label>"
+        payload += """<div class="controls"><select id="#{@id}" #{@class}name="quarryForm[#{@name}]">"""
         for option in @options
             if option.value == value
                 c = 'selected'
@@ -46,7 +54,7 @@ class Select
                 payload += """<option value="#{option.value}" #{c} >#{option.text}</option>"""
             else
                 payload += """<option value="#{option.value}" #{c} >#{option.value}</option>"""
-        payload += "</select>"
+        payload += "</select></div></div>"
         return payload
 
 class Checkbox
@@ -66,8 +74,12 @@ class Checkbox
         else
             c = ''
         return """
-            <label for="quarryForm[#{@name}]">#{@longname}</label>
-            <input type="checkbox" name="quarryForm[#{@name}]" value="#{value}" #{c} />
+            <div class="control-group">
+                <label class="control-label" for="quarryForm[#{@name}]">#{@longname}</label>
+                <div class="controls">
+                    <input type="checkbox" name="quarryForm[#{@name}]" value="#{value}" #{c} />
+                </div>
+            </div>
             """
 
 class Button
@@ -85,7 +97,7 @@ class Button
 
 
 class Form
-    constructor: (@elements, @id=null, _class=null) ->
+    constructor: (@elements, @id=null, _class=null, @legend=null) ->
         if @id
             @id = """ id="#{id}" """
         else
@@ -98,7 +110,9 @@ class Form
     render: (values={}, action='', method="POST") ->
         if values.length == 0
             values = req.body.quarryForm
-        payload = """<form#{@id}#{@class} method="#{method}" action="#{action}">"""
+        payload = """<form#{@id}#{@class} method="#{method}" action="#{action}"><fieldset>"""
+        if @legend
+            payload += "<legend>#{@legend}</legend>"
         for element in @elements
             if element.name in values and values[element.name] != undefined
                 payload += element.render values[element.name]
@@ -108,14 +122,22 @@ class Form
         return payload
 
 
+class Div
+    constructor: (@class, @id, @elements) ->
+    render: -> 
+        result = """<div class="#{@class}" id="#{@id}">"""
+        result += (el.render() for el in @elements).join "\n"
+        result += "</div>"
+        return result
+
 class LoginForm extends Form
     constructor: (id, _class) ->
         elements = [
             new Input('Username or Email', 'login'),
             new PasswordInput('Password', 'password'),
-            new Button('Login')
+            new Div('form-actions', 'login-actions', [new Button('Login')])
         ]
-        super elements, id, _class
+        super elements, id, _class, 'Login'
 
 
 class RegisterForm extends Form
@@ -125,9 +147,9 @@ class RegisterForm extends Form
             new Input('Email', 'email'),
             new PasswordInput('Password', 'password'),
             new PasswordInput('Password (again)', 'password2'),
-            new Button('Register')
+            new Div('form-actions', 'register-actions', [new Button('Register')])
         ]
-        super elements, id, _class
+        super elements, id, _class, 'Register'
 
 
 exports.LoginForm = LoginForm

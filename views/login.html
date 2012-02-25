@@ -3,14 +3,14 @@
 {% block title %}Login{% endblock %}
 
 {% block content %}
-<div class="span6">
-    <h2>Login</h2>
-    {% if error %}
-        <div class="error">
-            {{ error }}
-        </div>
-    {% endif %}
-
-    {{ login_form }}
+<div class="row">
+    <div class="span8">
+        {% if error %}
+            <div class="error">
+                {{ error }}
+            </div>
+        {% endif %}
+        {{ login_form }}
+    </div>
 </div>
 {% endblock %}

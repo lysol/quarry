@@ -36,7 +36,7 @@ app.get '/registerSuccess', (req, res) ->
     res.render 'registerSuccess'
 
 app.post '/register', (req, res) ->
-    registerForm = new forms.RegisterForm 'register-form', 'well'
+    registerForm = new forms.RegisterForm 'register-form', 'form-horizontal'
     registerForm = registerForm.render()
     _render = (error) ->
         res.render 'register',
@@ -62,7 +62,7 @@ app.post '/register', (req, res) ->
 
 
 app.get '/register', (req, res) ->
-    f = new forms.RegisterForm 'register-form', 'well'
+    f = new forms.RegisterForm 'register-form', 'form-horizontal'
     res.render 'register',
         register_form: f.render()
 
@@ -71,7 +71,7 @@ app.get '/logout', (req, res) ->
     res.redirect '/'
 
 app.post '/login', (req, res) ->
-    loginForm = new forms.LoginForm 'login-form', 'well'
+    loginForm = new forms.LoginForm 'login-form', 'form-horizontal'
     loginForm = loginForm.render()
     form = req.body.quarryForm
     if not form.login or not form.password
@@ -90,7 +90,7 @@ app.post '/login', (req, res) ->
 
 
 app.get '/login', (req, res) ->
-    lform = new forms.LoginForm 'login-form', 'well'
+    lform = new forms.LoginForm 'login-form', 'form-horizontal'
     res.render 'login',
         login_form: lform.render()
 
