@@ -14,12 +14,11 @@
 
     ctx.fillStyle = 'rgb(0,0,0)'
     ctx.fillRect 0,0,800,500
-    console.log 'got here'
 
     socket = io.connect 'http://127.0.0.1:3000'
     socket.on 'test', (data) -> console.log data
     socket.on 'blockUpdate', (data) ->
-        alert data
+        console.log data
 
     draw()
 

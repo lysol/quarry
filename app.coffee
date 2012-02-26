@@ -107,8 +107,6 @@ app.get '/', (req, res) ->
 
 
 app.get '/game', (req, res) ->
-    console.log "HEADERS DURING GAME"
-    console.log req.headers
     if not req.session.user
         res.redirect '/login'
     res.render 'game'
@@ -125,17 +123,15 @@ parseCookie = connect.utils.parseCookie
 Session = connect.middleware.session.Session
 
 
-io.set 'authorization', (data, accept) ->
-    console.log 'HEADERS DURING SOCKET:'
-    console.log data.headers
-    if data.headers.cookie
-        data.cookie = parseCookie data.headers.cookie
-        data.sessionID = data.cookie['express.sid']
-        sessionStorage.get data.sessionID, (err, session) ->
+io.set 'authorization', (inData, accept) ->
+    if inData.headers.cookie
+        inData.cookie = parseCookie inData.headers.cookie
+        inData.sessionID = inData.cookie['express.sid']
+        sessionStorage.get inData.sessionID, (err, session) ->
             if (err || !session)
                 accept 'Error', false
             else
-                data.session = new Session data, session
+                inData.session = new Session inData, session
                 accept null, true
     else
         return accept 'No cookie transmitted', false
@@ -143,32 +139,28 @@ io.set 'authorization', (data, accept) ->
 
 io.sockets.on 'connection', (client) ->
     hs = client.handshake
+    user = hs.session.user
+    console.log "USER: "
+    console.log user
 
     console.log 'Received a connection with a session: ' + hs.sessionID
 
-    cb = ->
-        hs.session.reload ->
-            hs.session.touch().save()
+    #cb = =>
+    #    hs.session.reload =>
+    #        hs.session.touch().save()
+    #
+    #intervalID = setInterval cb, 60 * 1000
 
-    intervalID = setInterval cb, 60 * 1000
-
-    client.on 'disconnect', -> clearInterval intervalId
+    #client.on 'disconnect', -> clearInterval intervalID
 
     client.on 'move', (data) ->
-        hs.session.user.move data.xd data.yd
-        data.sendAllBlocks hs.session.user, (blocks) ->
+        user.move data.xd data.yd
+        data.sendAllBlocks user, (blocks) ->
             console.log 'Emitting block update'
             client.emit 'blockUpdate', blocks: blocks
 
-    data.sendAllBlocks hs.session.user, (blocks) ->
-        console.log 'Emitting block update'
+    data.sendAllBlocks user, (blocks) ->
         client.emit 'blockUpdate', blocks: blocks
-    console.log 'butts'
-
-    console.log 'Client connected'
-    console.log client
-    client.emit 'test', fart: 1
-
 
 
 app.listen port

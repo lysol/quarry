@@ -1,9 +1,8 @@
 pg = require 'pg'
-redis = require 'redis'
+redis = (require 'redis').createClient()
 fs = require 'fs'
 crypto = require 'crypto'
 async = require 'async'
-
 
 tileSize = 32
 xTileRange = 800 / tileSize + 2 * tileSize
@@ -63,7 +62,7 @@ exports.tryLogin = (username, password, callback) ->
     password = hash password
     query = client.query "SELECT * FROM users WHERE (username = $1 OR email = $1) AND password = $2", [username, password], (err, result) ->
         if result.rowCount == 1
-            callback result.rows[0]
+            exports.connectUser result.rows[0]['username'], callback
         else
             callback False
 
@@ -75,14 +74,24 @@ redis.getSync = (key) ->
         continue
     return returnVal
 
+redis.hgetSync = (key, name) ->
+    returnVal = null
+    redis.hget key, name, (err, res) ->
+        returnVal = res
+    while not returnVal
+        continue
+    return returnVal
+
 exports.connectUser = (username, callback) ->
     exports.getUser username, (user) ->
+        if not user
+            throw 'No user found'
         redis.set "user:#{user.id}:x", user.x
         redis.set "user:#{user.id}:y", user.y
-        redis.keys "user:#{user.id}:*", (keys) ->
-            for key in keys
-                user.__defineGetter__ key, () -> redis.getSync "user:#{user.id}:#{key}"
-                user.__defineSetter__ key, (val) -> redis.set "user:#{user.id}:#{key}", val
+        redis.hgetall "user:#{user.id}:properties", (hash) ->
+            for key in hash
+                user.__defineGetter__ key, () -> redis.hgetSync "user:#{user.id}:properties", key
+                user.__defineSetter__ key, (val) -> redis.hset "user:#{user.id}:properties", key, val
         user.move = (xd, yx) ->
             @.x = x + xd
             @.y = y + yd
@@ -92,8 +101,8 @@ exports.connectUser = (username, callback) ->
         user.setProp = (key, value) ->
             redis.get "user:#{user.id}:#{key}", (err, res) ->
                 if !res
-                    user.__defineGetter__ key, () -> redis.getSync "user:#{user.id}:#{key}"
-                    user.__defineSetter__ key, (val) -> redis.set "user:#{user.id}:#{key}", val
+                    user.__defineGetter__ key, () -> redis.hgetSync "user:#{user.id}:properties", key
+                    user.__defineSetter__ key, (val) -> redis.hset "user:#{user.id}:properties", key, val
                 redis.set "user:#{user.id}:#{key}", value
 
         callback user
@@ -110,8 +119,8 @@ getBlocks = (x, y, callback) ->
     yl = parseInt y - yTileRange / 2
     yu = parseInt y + yTileRange / 2
     tups = []
-    xes = x for x in [xl..xu]
-    iyes = y for y in [yl..yu]
+    xes = (x for x in [xl..xu])
+    iyes = (y for y in [yl..yu])
     for x in xes
         for y in iyes
             tup = [x, y]
@@ -120,10 +129,14 @@ getBlocks = (x, y, callback) ->
     procTup = (tup, cb) ->
         x = tup[0]
         y = tup[1]
-        redis.hgetall "block:#{x}:#{y}", (err, res) ->
-            if res
-                blocks.push new Block res
-            cb()
+        redis.hkeys "block:#{x}:#{y}", (err, res) ->
+            if res.length > 0
+                redis.hgetall "block:#{x}:#{y}", (err, res) ->
+                    console.log res
+                    blocks.push new Block res
+                    cb()
+            else
+                cb()
     async.forEachSeries tups, procTup, (err) ->
         callback blocks
 
