@@ -99,6 +99,11 @@ exports.connectUser = (username, callback) ->
         callback user
 
 
+class Block
+    constructor: (hash) ->
+        for key in hash
+            @[key] = hash[key]
+
 getBlocks = (x, y, callback) ->
     xl = parseInt x - xTileRange / 2
     xu = parseInt x + xTileRange / 2
@@ -117,7 +122,7 @@ getBlocks = (x, y, callback) ->
         y = tup[1]
         redis.hgetall "block:#{x}:#{y}", (err, res) ->
             if res
-                blocks.push res
+                blocks.push new Block res
             cb()
     async.forEachSeries tups, procTup, (err) ->
         callback blocks

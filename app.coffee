@@ -8,6 +8,7 @@ io = require 'socket.io'
 sio = require 'socket.io-sessions'
 forms = require './forms'
 redisStore = (require 'connect-redis')(express)
+connect = require 'connect'
 
 app.configure () ->
     app.set 'view engine', 'html'
@@ -29,6 +30,10 @@ sessionStorage = new redisStore
 app.use express.session
     secret: '19j0ddjijs9jsoiejr'
     store: sessionStorage
+    key: 'express.sid'
+    cookie: { path: '/', httpOnly: false, maxAge: null }
+
+app.use app.router
 
 app.dynamicHelpers session: (req, res) -> req.session
 
@@ -102,6 +107,8 @@ app.get '/', (req, res) ->
 
 
 app.get '/game', (req, res) ->
+    console.log "HEADERS DURING GAME"
+    console.log req.headers
     if not req.session.user
         res.redirect '/login'
     res.render 'game'
@@ -113,26 +120,55 @@ app.get '/game', (req, res) ->
 
 io = io.listen app
 
-socket = sio.enable
-    socket: io
-    store: sessionStorage
-    parser: express.cookieParser()
+parseCookie = connect.utils.parseCookie
 
-console.log socket
+Session = connect.middleware.session.Session
 
-socket.on 'sinvalid', (client, session) -> client.emit 'refresh'
 
-socket.on 'sconnection', (client, session) ->
+io.set 'authorization', (data, accept) ->
+    console.log 'HEADERS DURING SOCKET:'
+    console.log data.headers
+    if data.headers.cookie
+        data.cookie = parseCookie data.headers.cookie
+        data.sessionID = data.cookie['express.sid']
+        sessionStorage.get data.sessionID, (err, session) ->
+            if (err || !session)
+                accept 'Error', false
+            else
+                data.session = new Session data, session
+                accept null, true
+    else
+        return accept 'No cookie transmitted', false
+    accept null, true
+
+io.sockets.on 'connection', (client) ->
+    hs = client.handshake
+
+    console.log 'Received a connection with a session: ' + hs.sessionID
+
+    cb = ->
+        hs.session.reload ->
+            hs.session.touch().save()
+
+    intervalID = setInterval cb, 60 * 1000
+
+    client.on 'disconnect', -> clearInterval intervalId
+
     client.on 'move', (data) ->
-        session.user.move data.xd data.yd
-        data.sendAllBlocks session.user, (blocks) ->
+        hs.session.user.move data.xd data.yd
+        data.sendAllBlocks hs.session.user, (blocks) ->
+            console.log 'Emitting block update'
             client.emit 'blockUpdate', blocks: blocks
 
-    data.sendAllBlocks session.user, (blocks) ->
+    data.sendAllBlocks hs.session.user, (blocks) ->
+        console.log 'Emitting block update'
         client.emit 'blockUpdate', blocks: blocks
     console.log 'butts'
 
-socket.on 'connection', (client) ->
-    console.log 'farts'
+    console.log 'Client connected'
+    console.log client
+    client.emit 'test', fart: 1
+
+
 
 app.listen port

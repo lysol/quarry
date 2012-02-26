@@ -6,15 +6,20 @@
 <script type="text/coffeescript">
 
 ($ 'document').ready () ->
+
+    draw = ->
+
     canvas = document.getElementById 'quarry'
-    if canvas.getContext
-        ctx = canvas.getContext '2d'
-    else
-        alert 'This game requires an HTML5-capable browser supporting the Canvas element.'
-    return if !ctx
+    ctx = canvas.getContext '2d'
 
     ctx.fillStyle = 'rgb(0,0,0)'
     ctx.fillRect 0,0,800,500
+    console.log 'got here'
+
+    socket = io.connect 'http://127.0.0.1:3000'
+    socket.on 'test', (data) -> console.log data
+    socket.on 'blockUpdate', (data) ->
+        alert data
 
     draw()
 
