@@ -4,6 +4,7 @@ fs = require 'fs'
 crypto = require 'crypto'
 async = require 'async'
 
+
 tileSize = 32
 xTileRange = 800 / tileSize + 2 * tileSize
 yTileRange = 500 / tileSize + 2 * tileSize
@@ -66,21 +67,6 @@ exports.tryLogin = (username, password, callback) ->
         else
             callback False
 
-redis.getSync = (key) ->
-    returnVal = null
-    redis.get key, (err, res) ->
-        returnVal = res
-    while not returnVal
-        continue
-    return returnVal
-
-redis.hgetSync = (key, name) ->
-    returnVal = null
-    redis.hget key, name, (err, res) ->
-        returnVal = res
-    while not returnVal
-        continue
-    return returnVal
 
 exports.connectUser = (username, callback) ->
     exports.getUser username, (user) ->
@@ -88,30 +74,59 @@ exports.connectUser = (username, callback) ->
             throw 'No user found'
         redis.set "user:#{user.id}:x", user.x
         redis.set "user:#{user.id}:y", user.y
-        redis.hgetall "user:#{user.id}:properties", (hash) ->
-            for key in hash
-                user.__defineGetter__ key, () -> redis.hgetSync "user:#{user.id}:properties", key
-                user.__defineSetter__ key, (val) -> redis.hset "user:#{user.id}:properties", key, val
+        #redis.hgetall "user:#{user.id}:properties", (hash) ->
+        #    for key in hash
+        #        user.__defineGetter__ key, () -> redis.hgetSync "user:#{user.id}:properties", key
+        #        user.__defineSetter__ key, (val) -> redis.hset "user:#{user.id}:properties", key, val
         user.move = (xd, yx) ->
             @.x = x + xd
             @.y = y + yd
             redis.set "user:#{user.id}:x", @.x
             redis.set "user:#{user.id}:y", @.y
 
-        user.setProp = (key, value) ->
-            redis.get "user:#{user.id}:#{key}", (err, res) ->
-                if !res
-                    user.__defineGetter__ key, () -> redis.hgetSync "user:#{user.id}:properties", key
-                    user.__defineSetter__ key, (val) -> redis.hset "user:#{user.id}:properties", key, val
-                redis.set "user:#{user.id}:#{key}", value
+        #user.setProp = (key, value) ->
+        #    redis.get "user:#{user.id}:#{key}", (err, res) ->
+        #        if !res
+        #            user.__defineGetter__ key, () -> redis.hgetSync "user:#{user.id}:properties", key
+        #            user.__defineSetter__ key, (val) -> redis.hset "user:#{user.id}:properties", key, val
+        #        redis.set "user:#{user.id}:#{key}", value
 
         callback user
 
 
 class Block
-    constructor: (hash) ->
-        for key in hash
-            @[key] = hash[key]
+    constructor: (@x, @y, @id=null) ->
+        if not @id
+            @genId()
+
+    hasProperty: (name, cb) -> redis.hexists "block_content:id:#{@id}", name, (err, res) -> cb res
+
+    getProperty: (name, cb) -> redis.hget "block_content:id:#{@id}", name, (err, res) ->
+        console.log "Key: #{name}\t Val: #{res}"
+        cb res
+
+    setProperty: (name, val, cb) ->
+        redis.hset "block_content:id:#{@id}", name, val, (err, res) ->
+            cb !err and res == 1
+
+    setProperties: (hash, cb) ->
+        redis.hmset "block_content:id:#{@id}", hash, (err, res) ->
+            cb !err and res == 1
+
+    dump: (cb) ->
+        us = @
+        resultant = {}
+        redis.hkeys "block_content:id:#{@id}", (err, res) ->
+            procTup = (key, cb) ->
+                console.log 
+                us.getProperty key, (res) ->
+                    resultant[key] = res
+                    cb()
+            async.forEachSeries res, procTup, (err) ->
+                cb resultant
+
+    genId: -> @id = hash (new Date()).getTime().toString() + Math.random()
+
 
 getBlocks = (x, y, callback) ->
     xl = parseInt x - xTileRange / 2
@@ -129,16 +144,42 @@ getBlocks = (x, y, callback) ->
     procTup = (tup, cb) ->
         x = tup[0]
         y = tup[1]
-        redis.hkeys "block:#{x}:#{y}", (err, res) ->
-            if res.length > 0
-                redis.hgetall "block:#{x}:#{y}", (err, res) ->
-                    console.log res
-                    blocks.push new Block res
-                    cb()
+        redis.scard "block:#{x}:#{y}:ids", (err, res) ->
+            if res > 0
+                redis.smembers "block:#{x}:#{y}:ids", (err, res) ->
+                    procTup2 = (id, cb2) ->
+                        (new Block x, y, id).dump (block) ->
+                            blocks.push block
+                            cb2()
+                    async.forEachSeries res, procTup2, (err) ->
+                        cb()
             else
                 cb()
     async.forEachSeries tups, procTup, (err) ->
         callback blocks
 
+
+exports.createBlock = (block, x, y, cb) ->
+    block.dump (data) ->
+        console.log data
+        redis.hmset "block_content:id:#{block.id}", data, (err, res) ->
+            redis.sadd "block:#{x}:#{y}:ids", block.id, (err, res) ->
+                if not err
+                    cb block.id
+
+
+
 exports.sendAllBlocks = (user, callback) ->
     getBlocks user.x, user.y, (blocks) -> callback blocks
+
+exports.Block = Block
+
+exports.quit = -> redis.quit()
+
+exports.keys = (cb) ->
+    redis.keys '*', (err, res) ->
+        icb = (key, ncb) ->
+            redis.hgetall key, (err, res) ->
+                ncb()
+        async.forEachSeries res, icb, (err) ->
+            cb()

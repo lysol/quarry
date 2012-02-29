@@ -5,6 +5,9 @@
 <script type="text/javascript" src="js/coffee-script.js"></script>
 <script type="text/coffeescript">
 
+blockStorage = {}
+blockIndex = {}
+
 ($ 'document').ready () ->
 
     draw = ->
@@ -19,6 +22,36 @@
     socket.on 'test', (data) -> console.log data
     socket.on 'blockUpdate', (data) ->
         console.log data
+        for block in data.blocks
+            blockStorage[block.id] = block
+            if not blockIndex[block.x]
+                blockIndex[block.x] = {}
+            if not blockIndex[block.x][block.y]
+                blockIndex[block.x][block.y] = []
+            blockIndex[block.x][block.y].push block.id
+    socket.on 'blockLocationRemove', (data) ->
+        for block in data.blocks
+            if blockIndex[block.x] and blockIndex[block.x][block.y]
+                thisList = blockIndex[block.x][block.y]
+                for key in thisList
+                    if key == block.id
+                        blockIndex[block.x][block.y].splice key, 1
+                        continue
+                if blockIndex[block.x][block.y].length == 0
+                    delete blockIndex[block.x][block.y]
+
+    socket.on 'blockRemove', (data) ->
+        for block in data.blocks
+            for x in blockIndex
+                for y in blockIndex[x]
+                    thisList = blockIndex[x][y]
+                    for item in thisList
+                        if thisList[item] == block.id
+                            blockIndex[x][y].splice item, 1
+                            continue
+            if blockStorage[block.id]
+                delete blockStorage[block.id]
+
 
     draw()
 
