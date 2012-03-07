@@ -7,8 +7,10 @@ app = express.createServer()
 io = require 'socket.io'
 sio = require 'socket.io-sessions'
 forms = require './forms'
-redisStore = (require 'connect-redis')(express)
 connect = require 'connect'
+
+loadedUsers = {}
+
 
 app.configure () ->
     app.set 'view engine', 'html'
@@ -26,7 +28,7 @@ app.use '/asset_images/', express.static __dirname + '/asset_images'
 app.use express.bodyParser()
 app.use express.cookieParser()
 
-sessionStorage = new redisStore
+sessionStorage = new connect.session.MemoryStore()
 app.use express.session
     secret: '19j0ddjijs9jsoiejr'
     store: sessionStorage
@@ -62,7 +64,10 @@ app.post '/register', (req, res) ->
                         _render 'Invalid email address.'
                     else
                         data.createUser form.username, form.password, form.email, (user) ->
+                            console.log 'from createuser'
+                            console.log user
                             req.session.user = user
+                            loadedUsers[user.id] = user
                             res.redirect '/registerSuccess'
 
 
@@ -72,6 +77,8 @@ app.get '/register', (req, res) ->
         register_form: f.render()
 
 app.get '/logout', (req, res) ->
+    if req.session.user and req.session.user.id in loadedUsers
+        delete loadedUsers[req.session.user.id]
     req.session.destroy()
     res.redirect '/'
 
@@ -86,7 +93,11 @@ app.post '/login', (req, res) ->
     else
         data.tryLogin form.login, form.password, (user) ->
             if user
+                console.log 'trylogin'
+                console.log user
                 req.session.user = user
+                loadedUsers[user.id] = user
+                console.log req.session.user
                 res.redirect '/'
             else
                 res.render 'login',
@@ -139,7 +150,9 @@ io.set 'authorization', (inData, accept) ->
 
 io.sockets.on 'connection', (client) ->
     hs = client.handshake
-    user = hs.session.user
+    if not hs.session or not hs.session.user or hs.session.user.id not in loadedUsers
+        return
+    user = loadedUsers[hs.session.user.id]
     console.log "USER: "
     console.log user
 
@@ -154,7 +167,9 @@ io.sockets.on 'connection', (client) ->
     #client.on 'disconnect', -> clearInterval intervalID
 
     client.on 'move', (data) ->
-        user.move data.xd data.yd
+        console.log "User during move"
+        console.log user
+        user.move data.xd, data.yd
         data.sendAllBlocks user, (blocks) ->
             console.log 'Emitting block update'
             client.emit 'blockUpdate', blocks: blocks

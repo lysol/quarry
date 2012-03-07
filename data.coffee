@@ -25,7 +25,11 @@ hash = (string) =>
 
 
 connString = "tcp://quarry:quarry@localhost/quarry"
-client = new pg.Client connString
+client = new pg.Client
+    host: 'localhost'
+    user: 'quarry'
+    password: 'quarry'
+    database: 'quarry'
 client.connect()
 
 exports.createUser = (username, password, email, callback) ->
@@ -48,20 +52,28 @@ exports.createUser = (username, password, email, callback) ->
                             $2,
                             $3
                         );""", [username, hash(password), email]
-                    query = client.query """
-                        SELECT * FROM users
-                        WHERE username = $1
-                        """, [username], (error, result) ->
-                            callback result.rows[0]
+                    config =
+                        text: """SELECT * FROM users WHERE username = $1"""
+                        rowClass: exports.User
+                    query = client.query config, [username], (error, result) ->
+                        console.log result
+                        callback result.rows[0]
 
 exports.getUser = (username, callback) ->
-    query = client.query "SELECT * FROM users WHERE username = $1 OR email = $1", [username], (err, result) ->
+    config = 
+        text: "SELECT * FROM users WHERE username = $1 OR email = $1"
+        rowClass: User
+    query = client.query config, [username], (err, result) ->
+        console.log result
         callback result.rows[0]
 
 
 exports.tryLogin = (username, password, callback) ->
     password = hash password
-    query = client.query "SELECT * FROM users WHERE (username = $1 OR email = $1) AND password = $2", [username, password], (err, result) ->
+    config = 
+        text: "SELECT * FROM users WHERE (username = $1 OR email = $1) AND password = $2"
+        rowClass: User
+    query = client.query config, [username, password], (err, result) ->
         if result.rowCount == 1
             exports.connectUser result.rows[0]['username'], callback
         else
@@ -78,11 +90,6 @@ exports.connectUser = (username, callback) ->
         #    for key in hash
         #        user.__defineGetter__ key, () -> redis.hgetSync "user:#{user.id}:properties", key
         #        user.__defineSetter__ key, (val) -> redis.hset "user:#{user.id}:properties", key, val
-        user.move = (xd, yx) ->
-            @.x = x + xd
-            @.y = y + yd
-            redis.set "user:#{user.id}:x", @.x
-            redis.set "user:#{user.id}:y", @.y
 
         #user.setProp = (key, value) ->
         #    redis.get "user:#{user.id}:#{key}", (err, res) ->
@@ -92,6 +99,20 @@ exports.connectUser = (username, callback) ->
         #        redis.set "user:#{user.id}:#{key}", value
 
         callback user
+
+
+class User
+
+    constructor: ->
+        console.log @
+        console.log 'balls'
+
+    move: (xd, yx) =>
+        console.log "Moving #{xd} #{xy}"
+        @x = x + xd
+        @y = y + yd
+        redis.set "user:#{user.id}:x", @.x
+        redis.set "user:#{user.id}:y", @.y
 
 
 class Block
@@ -173,6 +194,7 @@ exports.sendAllBlocks = (user, callback) ->
     getBlocks user.x, user.y, (blocks) -> callback blocks
 
 exports.Block = Block
+exports.User = User
 
 exports.quit = -> redis.quit()
 
