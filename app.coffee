@@ -2,7 +2,7 @@ port = 3000
 
 twigjs = require 'twig'
 express = require 'express'
-data = require './data'
+datum = require './data'
 app = express.createServer()
 io = require 'socket.io'
 sio = require 'socket.io-sessions'
@@ -50,11 +50,11 @@ app.post '/register', (req, res) ->
             error: error
             register_form: registerForm
     form = req.body.quarryForm
-    data.getUser form.username, (user) ->
+    datum.getUser form.username, (user) ->
         if user
             _render 'This username already exists.'
         else
-            data.getUser form.email, (user) ->
+            datum.getUser form.email, (user) ->
                 if user
                     _render 'This email address already exists.'
                 else
@@ -63,7 +63,7 @@ app.post '/register', (req, res) ->
                     else if '@' not in form.email
                         _render 'Invalid email address.'
                     else
-                        data.createUser form.username, form.password, form.email, (user) ->
+                        datum.createUser form.username, form.password, form.email, (user) ->
                             console.log 'from createuser'
                             console.log user
                             req.session.user = user
@@ -91,7 +91,7 @@ app.post '/login', (req, res) ->
             error: 'Please fill out the entire form.'
             login_form: loginForm
     else
-        data.tryLogin form.login, form.password, (user) ->
+        datum.tryLogin form.login, form.password, (user) ->
             if user
                 console.log 'trylogin'
                 console.log user
@@ -150,7 +150,16 @@ io.set 'authorization', (inData, accept) ->
 
 io.sockets.on 'connection', (client) ->
     hs = client.handshake
-    if not hs.session or not hs.session.user or hs.session.user.id not in loadedUsers
+    console.log "IO VALS"
+    if hs.session
+        console.log hs.session
+        if hs.session.user
+            console.log hs.session.user
+            if hs.session.user.id
+                console.log hs.session.user.id
+    console.log loadedUsers
+    console.log "END IO VALS"
+    if not hs.session or not hs.session.user or not loadedUsers[hs.session.user.id]
         return
     user = loadedUsers[hs.session.user.id]
     console.log "USER: "
@@ -169,12 +178,13 @@ io.sockets.on 'connection', (client) ->
     client.on 'move', (data) ->
         console.log "User during move"
         console.log user
+        console.log 'move!'
         user.move data.xd, data.yd
-        data.sendAllBlocks user, (blocks) ->
+        datum.sendAllBlocks user, (blocks) ->
             console.log 'Emitting block update'
             client.emit 'blockUpdate', blocks: blocks
 
-    data.sendAllBlocks user, (blocks) ->
+    datum.sendAllBlocks user, (blocks) ->
         client.emit 'blockUpdate', blocks: blocks
 
 

@@ -107,12 +107,12 @@ class User
         console.log @
         console.log 'balls'
 
-    move: (xd, yx) =>
-        console.log "Moving #{xd} #{xy}"
-        @x = x + xd
-        @y = y + yd
-        redis.set "user:#{user.id}:x", @.x
-        redis.set "user:#{user.id}:y", @.y
+    move: (xd, yd) =>
+        console.log "Moving #{xd} #{yd}"
+        @x = @x + xd
+        @y = @y + yd
+        redis.set "user:#{@id}:x", @x
+        redis.set "user:#{@id}:y", @y
 
 
 class Block
