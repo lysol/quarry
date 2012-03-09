@@ -64,8 +64,6 @@ app.post '/register', (req, res) ->
                         _render 'Invalid email address.'
                     else
                         datum.createUser form.username, form.password, form.email, (user) ->
-                            console.log 'from createuser'
-                            console.log user
                             req.session.user = user
                             loadedUsers[user.id] = user
                             res.redirect '/registerSuccess'
@@ -93,11 +91,8 @@ app.post '/login', (req, res) ->
     else
         datum.tryLogin form.login, form.password, (user) ->
             if user
-                console.log 'trylogin'
-                console.log user
                 req.session.user = user
                 loadedUsers[user.id] = user
-                console.log req.session.user
                 res.redirect '/'
             else
                 res.render 'login',
@@ -119,9 +114,9 @@ app.get '/', (req, res) ->
 
 app.get '/game', (req, res) ->
     if not req.session.user
-        res.redirect '/login'
-    res.render 'game'
-
+        res.render 'login'
+    else
+        res.render 'game'
 
 
 #######
@@ -150,21 +145,9 @@ io.set 'authorization', (inData, accept) ->
 
 io.sockets.on 'connection', (client) ->
     hs = client.handshake
-    console.log "IO VALS"
-    if hs.session
-        console.log hs.session
-        if hs.session.user
-            console.log hs.session.user
-            if hs.session.user.id
-                console.log hs.session.user.id
-    console.log loadedUsers
-    console.log "END IO VALS"
     if not hs.session or not hs.session.user or not loadedUsers[hs.session.user.id]
         return
     user = loadedUsers[hs.session.user.id]
-    console.log "USER: "
-    console.log user
-
     console.log 'Received a connection with a session: ' + hs.sessionID
 
     #cb = =>
@@ -176,12 +159,8 @@ io.sockets.on 'connection', (client) ->
     #client.on 'disconnect', -> clearInterval intervalID
 
     client.on 'move', (data) ->
-        console.log "User during move"
-        console.log user
-        console.log 'move!'
         user.move data.xd, data.yd
         datum.sendAllBlocks user, (blocks) ->
-            console.log 'Emitting block update'
             client.emit 'blockUpdate', blocks: blocks
 
     datum.sendAllBlocks user, (blocks) ->

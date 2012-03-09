@@ -20,13 +20,16 @@ player_img = new Image()
 player_img.src = "img/player.png"
 socket = null
 
+buildImage = (block) ->
+    if not block.image_cached
+        img = new Image()
+        img.src = "img/#{block.image}"
+        block.image_cached = img
+
 buildImages = ->
     for id in blockIndex
         block = blockIndex[block]
-        if not block.image_cached
-            img = new Image()
-            img.src = "img/#{block.image}"
-            block.image_cached = img
+        buildImage block
 
 kibo = new Kibo()
 
@@ -39,16 +42,17 @@ kibo = new Kibo()
         if clock % 100 == 0
             clock = 0
             buildImages()
-        for id in blockIndex
-            block = blockIndex[id]
+        for id, block of blockStorage
             xdiff = Math.abs block.x - location.x
             ydiff = Math.abs block.y - location.y
             if xdiff < canvas_width / tileSize and ydiff < canvas_height / tileSize
                 x1 = (location.x - block.x) * tileSize + canvas_width / 2
                 x1 -= tileSize / 2
                 y1 = (location.y - block.y) * tileSize + canvas_height / 2
-                y1 -= timeSize / 2
-                ctx.drawImage block.img, x1, y1, tileSize, tileSize
+                y1 -= tileSize / 2
+                if not block.image_cached
+                    buildImage block
+                ctx.drawImage block.image_cached, x1, y1, tileSize, tileSize
                 console.log "Drawing at #{x1}, #{y1}"
         ctx.fillStyle = 'white'
         ctx.font = '10pt Helvetica'
@@ -60,11 +64,10 @@ kibo = new Kibo()
     ctx = canvas.getContext '2d'
 
     socket = io.connect 'http://127.0.0.1:3000'
-    socket.on 'test', (data) -> console.log data
+    socket.on 'test', (data) ->
     socket.on 'locationUpdate', (data) ->
         location = data.location
     socket.on 'blockUpdate', (data) ->
-        console.log data
         for block in data.blocks
             blockStorage[block.id] = block
             if not blockIndex[block.x]

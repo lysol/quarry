@@ -56,7 +56,6 @@ exports.createUser = (username, password, email, callback) ->
                         text: """SELECT * FROM users WHERE username = $1"""
                         rowClass: exports.User
                     query = client.query config, [username], (error, result) ->
-                        console.log result
                         callback result.rows[0]
 
 exports.getUser = (username, callback) ->
@@ -64,7 +63,6 @@ exports.getUser = (username, callback) ->
         text: "SELECT * FROM users WHERE username = $1 OR email = $1"
         rowClass: User
     query = client.query config, [username], (err, result) ->
-        console.log result
         callback result.rows[0]
 
 
@@ -104,11 +102,8 @@ exports.connectUser = (username, callback) ->
 class User
 
     constructor: ->
-        console.log @
-        console.log 'balls'
 
     move: (xd, yd) =>
-        console.log "Moving #{xd} #{yd}"
         @x = @x + xd
         @y = @y + yd
         redis.set "user:#{@id}:x", @x
@@ -123,7 +118,6 @@ class Block
     hasProperty: (name, cb) -> redis.hexists "block_content:id:#{@id}", name, (err, res) -> cb res
 
     getProperty: (name, cb) -> redis.hget "block_content:id:#{@id}", name, (err, res) ->
-        console.log "Key: #{name}\t Val: #{res}"
         cb res
 
     setProperty: (name, val, cb) ->
@@ -136,10 +130,12 @@ class Block
 
     dump: (cb) ->
         us = @
-        resultant = {}
+        resultant = 
+            x: @x
+            y: @y
+            id: @id
         redis.hkeys "block_content:id:#{@id}", (err, res) ->
             procTup = (key, cb) ->
-                console.log 
                 us.getProperty key, (res) ->
                     resultant[key] = res
                     cb()
@@ -182,7 +178,6 @@ getBlocks = (x, y, callback) ->
 
 exports.createBlock = (block, x, y, cb) ->
     block.dump (data) ->
-        console.log data
         redis.hmset "block_content:id:#{block.id}", data, (err, res) ->
             redis.sadd "block:#{x}:#{y}:ids", block.id, (err, res) ->
                 if not err
