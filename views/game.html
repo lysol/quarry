@@ -104,19 +104,19 @@ kibo = new Kibo()
 
 kibo.down 'up', ->
     location.y -= 1
-    socket.emit 'move', xd: 0, yd: -1
+    socket.emit 'move', xd: 0, yd: 1
 
 kibo.down 'down', ->
     location.y += 1
-    socket.emit 'move', xd: 0, yd: 1
+    socket.emit 'move', xd: 0, yd: -1
 
 kibo.down 'left', ->
     location.x -= 1
-    socket.emit 'move', xd: -1, yd: 0
+    socket.emit 'move', xd: 1, yd: 0
 
 kibo.down 'right', ->
     location.x += 1
-    socket.emit 'move', xd: 1, yd: 0
+    socket.emit 'move', xd: -1, yd: 0
 
 
 
