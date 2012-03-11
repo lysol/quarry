@@ -21,7 +21,9 @@ class Game
         @player_img = new Image()
         @player_img.src = "img/player.png"        
         @socket = null
-        @kibo = new Kibo() 
+        @kibo = new Kibo()
+
+        @imageCache = {} 
 
     draw: =>
         #@bufferContext.clearRect 0, 0, @canvas_width, @canvas_height
@@ -40,9 +42,8 @@ class Game
                 x1 -= @tileSize / 2
                 y1 = (@location.y - block.y) * @tileSize + @canvas_height / 2
                 y1 -= @tileSize / 2
-                if not block.image_cached
-                    @buildImage block
-                @bufferContext.drawImage block.image_cached, x1, y1, @tileSize, @tileSize
+                @buildImage block
+                @bufferContext.drawImage @imageCache[block.image], x1, y1, @tileSize, @tileSize
         @bufferContext.fillStyle = 'white'
         @bufferContext.font = '10pt Helvetica'
         @bufferContext.fillText "Position #{@location.x},#{@location.y}", 5, 20
@@ -57,15 +58,21 @@ class Game
             @setLocation data.location
         blockStorage = @blockStorage
         blockIndex = @blockIndex
+        once = false
         @socket.on 'blockUpdate', (data) =>
+            count = data.blocks.length
+            console.log "block count: #{count}"
             for block in data.blocks
                 blockStorage[block.id] = block
+                if once 
+                    continue                                    
                 if not blockIndex[block.x]
                     blockIndex[block.x] = {}
                 if not blockIndex[block.x][block.y]
                     blockIndex[block.x][block.y] = []
                 if block.id not in blockIndex[block.x][block.y]
                     blockIndex[block.x][block.y].push block.id
+            once = true
         @socket.on 'blockLocationRemove', (data) =>
             for block in data.blocks
                 if @blockIndex[block.x] and @blockIndex[block.x][block.y]
@@ -112,11 +119,11 @@ class Game
 
         setInterval runDraw, 1000 / @frameRateTarget
 
-    buildImage: (block) ->
-        if not block.image_cached and block.image
+    buildImage: (block) =>
+        if block.image and not @imageCache[block.image]
             img = new Image()
             img.src = "img/#{block.image}"
-            block.image_cached = img
+            @imageCache[block.image] = img
 
     buildImages: =>
         for id of @blockIndex
