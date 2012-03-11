@@ -24,8 +24,8 @@ class Game
         @kibo = new Kibo() 
 
     draw: =>
-        @bufferContext.clearRect 0, 0, @canvas_width, @canvas_height
-        @canvasContext.clearRect 0, 0, @canvas_width, @canvas_height
+        #@bufferContext.clearRect 0, 0, @canvas_width, @canvas_height
+        #@canvasContext.clearRect 0, 0, @canvas_width, @canvas_height
         @bufferContext.fillStyle = 'rgb(0,0,0)'
         @bufferContext.fillRect 0,0,@canvas_width,@canvas_height    
         @clock++
@@ -33,8 +33,8 @@ class Game
             @clock = 0
             @buildImages()
         for id, block of @blockStorage
-            xdiff = Math.abs block.x - location.x
-            ydiff = Math.abs block.y - location.y
+            xdiff = Math.abs block.x - @location.x
+            ydiff = Math.abs block.y - @location.y
             if xdiff < @canvas_width / @tileSize and ydiff < @canvas_height / @tileSize
                 x1 = (@location.x - block.x) * @tileSize + @canvas_width / 2
                 x1 -= @tileSize / 2
@@ -50,21 +50,23 @@ class Game
             @canvas_height / 2 - @tileSize / 2, @tileSize, @tileSize
         @canvasContext.drawImage @buffer, 0, 0, @canvas_width, @canvas_height
 
-    initSocket: ->
+    initSocket: =>
         @socket = io.connect 'http://127.0.0.1:3000'
         @socket.on 'test', (data) ->
         @socket.on 'locationUpdate', (data) =>
             @setLocation data.location
+        blockStorage = @blockStorage
+        blockIndex = @blockIndex
         @socket.on 'blockUpdate', (data) =>
             for block in data.blocks
-                @blockStorage[block.id] = block
-                if not @blockIndex[block.x]
-                    @blockIndex[block.x] = {}
-                if not @blockIndex[block.x][block.y]
-                    @blockIndex[block.x][block.y] = []
-                if block.id not in @blockIndex[block.x][block.y]
-                    @blockIndex[block.x][block.y].push block.id
-        @socket.on 'blockLocationRemove', (data) ->
+                blockStorage[block.id] = block
+                if not blockIndex[block.x]
+                    blockIndex[block.x] = {}
+                if not blockIndex[block.x][block.y]
+                    blockIndex[block.x][block.y] = []
+                if block.id not in blockIndex[block.x][block.y]
+                    blockIndex[block.x][block.y].push block.id
+        @socket.on 'blockLocationRemove', (data) =>
             for block in data.blocks
                 if @blockIndex[block.x] and @blockIndex[block.x][block.y]
                     thisList = @blockIndex[block.x][block.y]
@@ -75,7 +77,7 @@ class Game
                     if @blockIndex[block.x][block.y].length == 0
                         delete @blockIndex[block.x][block.y]
 
-        @socket.on 'blockRemove', (data) ->
+        @socket.on 'blockRemove', (data) =>
             for block in data.blocks
                 for x in @blockIndex
                     for y in @blockIndex[x]
@@ -86,37 +88,37 @@ class Game
                                 continue
                 if @blockStorage[block.id]
                     delete @blockStorage[block.id]    
-    start: ->
+    start: =>
         @initSocket()
 
 
         @kibo.down 'up', =>
-            @location.y -= 1
-            @socket.emit 'move', xd: 0, yd: -1
-
-        @kibo.down 'down', =>
             @location.y += 1
             @socket.emit 'move', xd: 0, yd: 1
 
-        @kibo.down 'left', =>
-            @location.x -= 1
-            @socket.emit 'move', xd: -1, yd: 0
+        @kibo.down 'down', =>
+            @location.y -= 1
+            @socket.emit 'move', xd: 0, yd: -1
 
-        @kibo.down 'right', =>
+        @kibo.down 'left', =>
             @location.x += 1
             @socket.emit 'move', xd: 1, yd: 0
+
+        @kibo.down 'right', =>
+            @location.x -= 1
+            @socket.emit 'move', xd: -1, yd: 0
 
         runDraw = => @draw()
 
         setInterval runDraw, 1000 / @frameRateTarget
 
     buildImage: (block) ->
-        if not block.image_cached
+        if not block.image_cached and block.image
             img = new Image()
             img.src = "img/#{block.image}"
             block.image_cached = img
 
-    buildImages: ->
+    buildImages: =>
         for id of @blockIndex
             block = @blockIndex[id]
             @buildImage block
@@ -125,6 +127,7 @@ class Game
         @location.x = loc.x
         @location.y = loc.y
 
+game = null
 
 ($ 'document').ready () ->
     game = new Game()
